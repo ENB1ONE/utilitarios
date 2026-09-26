@@ -1,0 +1,355 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PureVoid Downloader</title>
+    
+    <link rel="manifest" href="../manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="../assets/purevoid.jpg">
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+:root {
+  --bg-color: #f5f5f7;
+  --bg-mesh-1: rgba(0, 122, 255, 0.12);
+  --bg-mesh-2: rgba(191, 90, 242, 0.12);
+  --text-main: #1d1d1f;
+  --text-muted: #86868b;
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  --accent-color: #007aff;
+  --accent-hover: #005bb5;
+  --card-bg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #000000;
+    --bg-mesh-1: rgba(10, 132, 255, 0.15);
+    --bg-mesh-2: rgba(94, 92, 230, 0.15);
+    --text-main: #f5f5f7;
+    --text-muted: #a1a1a6;
+    --glass-bg: rgba(28, 28, 30, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --accent-color: #0a84ff;
+    --accent-hover: #007aff;
+    --card-bg: #1c1c1e;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+  background-image: 
+    radial-gradient(at 0% 0%, var(--bg-mesh-1) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, var(--bg-mesh-2) 0px, transparent 50%);
+  background-attachment: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+.search-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.search-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 700px;
+  animation: fadeDown 0.6s ease-out;
+}
+
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+h1 {
+  font-size: clamp(2.5rem, 6vw, 3.5rem);
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  text-align: center;
+  letter-spacing: -1px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: clamp(1rem, 3vw, 1.2rem);
+  margin-bottom: 40px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.search-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  background: var(--glass-bg);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--glass-border);
+  border-radius: 40px;
+  padding: 8px 12px 8px 24px;
+  box-shadow: var(--glass-shadow);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-sizing: border-box;
+}
+
+.search-bar:focus-within {
+  transform: translateY(-4px);
+  background: var(--glass-bg);
+  border-color: var(--accent-color);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+}
+
+.search-icon {
+  width: 24px; height: 24px; min-width: 24px;
+  fill: none; stroke: var(--text-muted); stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round;
+  margin-right: 15px;
+}
+
+.search-input {
+  flex-grow: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 1.1rem;
+  color: var(--text-main);
+  width: 100%;
+}
+.search-input::placeholder { color: var(--text-muted); }
+
+.download-btn {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  padding: 14px 28px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.download-btn:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-2px); }
+.download-btn:active:not(:disabled) { transform: scale(0.96); }
+.download-btn:disabled { background: var(--text-muted); opacity: 0.5; cursor: not-allowed; }
+
+/* CSS Spinner Apple Style */
+.spinner {
+  width: 20px; height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 10px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-text {
+  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.1);
+  border: 1px solid rgba(255, 59, 48, 0.2);
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Results Panel */
+.results-panel {
+  width: 100%;
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-radius: 32px;
+  border: 1px solid var(--glass-border);
+  padding: 40px;
+  margin-top: 40px;
+  box-shadow: var(--glass-shadow);
+  box-sizing: border-box;
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.results-header {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.media-thumbnail {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+}
+
+.results-header h2 { margin: 0 0 8px 0; font-size: 1.5rem; }
+
+.action-btn {
+  background: var(--accent-color);
+  color: white;
+  text-decoration: none;
+  padding: 16px 32px;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: inline-block;
+  margin-top: 10px;
+}
+.action-btn:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3); }
+.action-btn:active { transform: scale(0.96); }
+
+.btn-back {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 16px;
+  margin-bottom: 24px;
+  border-radius: 20px;
+  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-back:hover { background: rgba(134, 134, 139, 0.1); color: var(--text-main); }
+
+@media (max-width: 600px) {
+  .search-container { padding: 16px; }
+  .search-bar { flex-direction: column; border-radius: 24px; padding: 16px; gap: 16px; }
+  .search-icon { display: none; }
+  .search-input { text-align: center; }
+  .download-btn { width: 100%; padding: 16px; }
+  .results-panel { padding: 24px; border-radius: 24px; }
+  .action-btn { width: 100%; box-sizing: border-box; }
+}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        function App() {
+          const [url, setUrl] = useState('');
+          const [isLoading, setIsLoading] = useState(false);
+          const [error, setError] = useState('');
+          const [result, setResult] = useState(null);
+
+          const handleDownload = async (e) => {
+            e.preventDefault();
+            if (!url) return;
+            setIsLoading(true);
+            setError('');
+
+            try {
+              const response = await fetch('https://twist-associate-mazda-mostly.trycloudflare.com/api/void', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url }),
+              });
+              const data = await response.json();
+              if (!response.ok) throw new Error(data.detail || "Erro ao comunicar com o servidor.");
+              
+              setResult(data);
+            } catch (err) {
+              setError(err.message);
+            } finally {
+              setIsLoading(false);
+            }
+          };
+
+          return (
+            <div className="search-container">
+              <div className="search-wrapper">
+                
+                {!result ? (
+                  <React.Fragment>
+                    <h1>PureVoid</h1>
+                    <p className="subtitle">Cole o link (YouTube, Instagram, TikTok) e seja sugado pelo buraco negro sem ver um anúncio.</p>
+                    
+                    <form className="search-bar" onSubmit={handleDownload}>
+                      <svg className="search-icon" viewBox="0 0 24 24">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                      </svg>
+                      
+                      <input 
+                        type="text" className="search-input" 
+                        placeholder="Cole o link da mídia aqui..." 
+                        autoComplete="off" value={url} onChange={(e) => setUrl(e.target.value)}
+                        disabled={isLoading}
+                      />
+                      
+                      <button type="submit" className="download-btn" disabled={isLoading || !url.trim()}>
+                        {isLoading ? <><div className="spinner"></div> Processando</> : 'Sugar Mídia'}
+                      </button>
+                    </form>
+                    {error && <div className="error-text">{error}</div>}
+                  </React.Fragment>
+                ) : (
+                  <div className="results-panel">
+                    <button onClick={() => {setResult(null); setUrl('');}} className="btn-back">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                      Novo Link
+                    </button>
+                    
+                    <div className="results-header">
+                      {result.thumbnail && <img src={result.thumbnail} alt="Thumbnail" className="media-thumbnail" />}
+                      <h2>{result.title}</h2>
+                      <p>Mídia extraída com sucesso.</p>
+                    </div>
+
+                    <a href={result.download_link} target="_blank" rel="noopener noreferrer" className="action-btn">
+                      Baixar Arquivo
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

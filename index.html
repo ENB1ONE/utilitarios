@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -322,16 +322,11 @@ body {
                   <p>Extraia pacotes nativos da Play Store de forma segura. Detecta a arquitetura ideal automaticamente.</p>
                 </div>
 
-                <div className="util-card disabled">
-                  <div className="card-icon placeholder">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="16"></line>
-                      <line x1="8" y1="12" x2="16" y2="12"></line>
-                    </svg>
-                  </div>
-                  <h2>Em Breve</h2>
-                  <p>Estamos polindo um novo utilitário. A excelência leva algum tempo.</p>
+                {/* PureVoid Card */}
+                <div onClick={(e) => handleCardClick(e, './purevoid/')} className="util-card" role="button" tabIndex="0">
+                  <img src="./assets/purevoid.jpg" alt="PureVoid Logo" className="card-icon" />
+                  <h2>PureVoid</h2>
+                  <p>Um buraco negro para seus links. Baixe mídias de qualquer lugar instantaneamente. Zero anúncios, zero enrolação.</p>
                 </div>
 
               </main>
