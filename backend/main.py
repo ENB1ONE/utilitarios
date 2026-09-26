@@ -1,8 +1,11 @@
 ﻿from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 import re
 import yt_dlp
+import requests
+import urllib.parse
 
 app = FastAPI(title="APK Downloader API")
 
@@ -24,7 +27,7 @@ class VoidRequest(BaseModel):
 async def extract_apk(request: URLRequest):
     url = request.playstore_url
     if not re.search(r'play\.google\.com/store/apps/details\?id=', url):
-        raise HTTPException(status_code=400, detail="Formato de URL inválido. Use um link oficial da Play Store.")
+        raise HTTPException(status_code=400, detail="Formato de URL inválido.")
     package_name = url.split("id=")[1].split("&")[0]
     versions = [
         {
@@ -33,20 +36,6 @@ async def extract_apk(request: URLRequest):
             "arch": "Todas",
             "target": "Recomendado para a maioria dos Celulares e Tablets modernos.",
             "download_link": f"https://d.apkpure.com/b/XAPK/{package_name}?version=latest"
-        },
-        {
-            "id": 2,
-            "type": "APK Normal",
-            "arch": "arm64-v8a",
-            "target": "Celulares de médio a alto padrão recentes (após 2017).",
-            "download_link": f"https://d.apkpure.com/b/APK/{package_name}?version=latest&arch=arm64-v8a"
-        },
-        {
-            "id": 3,
-            "type": "APK Legado",
-            "arch": "armeabi-v7a",
-            "target": "Celulares muito antigos, TV Boxes, Emuladores.",
-            "download_link": f"https://d.apkpure.com/b/APK/{package_name}?version=latest&arch=armeabi-v7a"
         }
     ]
     return {
@@ -60,7 +49,6 @@ async def extract_apk(request: URLRequest):
 async def void_download(request: VoidRequest):
     url = request.url
     
-    # Opções avançadas para evitar bloqueios de Bot do YouTube na nuvem (OCI)
     ydl_opts = {
         'format': 'best',
         'quiet': True,
@@ -71,8 +59,7 @@ async def void_download(request: VoidRequest):
             'youtube': ['player_client=android', 'player_skip=webpage,configs']
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
     }
     
@@ -90,14 +77,32 @@ async def void_download(request: VoidRequest):
             if not download_url:
                 raise Exception("URL de download direto não encontrada.")
             
+            # Encoda a URL do YouTube para passar para o nosso proxy
+            safe_url = urllib.parse.quote(download_url, safe='')
+            proxy_link = f"https://twist-associate-mazda-mostly.trycloudflare.com/api/proxy?video_url={safe_url}"
+            
             return {
                 "status": "sucesso",
                 "title": title,
                 "thumbnail": thumbnail,
-                "download_link": download_url
+                "download_link": proxy_link
             }
     except Exception as e:
         error_str = str(e)
         if "Sign in to confirm" in error_str:
-            raise HTTPException(status_code=403, detail="O YouTube bloqueou temporariamente o IP do servidor (Proteção Anti-Bot da Oracle Cloud). Tente com links de outras plataformas (Insta/TikTok) ou será necessário configurar cookies no backend.")
+            raise HTTPException(status_code=403, detail="O YouTube bloqueou a extração. Tente outro link.")
         raise HTTPException(status_code=400, detail=f"Erro ao extrair mídia: {error_str}")
+
+@app.get("/api/proxy")
+def proxy_video(video_url: str):
+    # Streaming direto da nuvem para o cliente (em memória, sem salvar no HD)
+    def iterfile():
+        with requests.get(video_url, stream=True, headers={"User-Agent": "Mozilla/5.0"}) as r:
+            r.raise_for_status()
+            for chunk in r.iter_content(chunk_size=8192):
+                if chunk:
+                    yield chunk
+
+    return StreamingResponse(iterfile(), media_type="video/mp4", headers={
+        "Content-Disposition": "attachment; filename=\"purevoid_media.mp4\""
+    })
