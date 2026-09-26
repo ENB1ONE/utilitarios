@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Utilitários Hub</title>
     
     <!-- PWA Manifest & iOS Meta tags -->
@@ -20,38 +20,83 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-/* Glassmorphism e tema Apple */
+/* 
+  UX/UI Premium System 
+  - Suporte nativo a Dark/Light Mode
+  - Cores semânticas da Apple
+  - Glassmorphism aprimorado
+*/
+:root {
+  --bg-color: #f5f5f7;
+  --bg-mesh-1: rgba(0, 122, 255, 0.12);
+  --bg-mesh-2: rgba(191, 90, 242, 0.12);
+  --text-main: #1d1d1f;
+  --text-muted: #86868b;
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+  --accent-color: #007aff;
+  --accent-hover: #005bb5;
+  --modal-bg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #000000;
+    --bg-mesh-1: rgba(10, 132, 255, 0.15);
+    --bg-mesh-2: rgba(94, 92, 230, 0.15);
+    --text-main: #f5f5f7;
+    --text-muted: #a1a1a6;
+    --glass-bg: rgba(28, 28, 30, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --accent-color: #0a84ff;
+    --accent-hover: #007aff;
+    --modal-bg: #1c1c1e;
+  }
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top left, #a18cd1 0%, #fbc2eb 100%);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #1d1d1f;
+  background-color: var(--bg-color);
+  background-image: 
+    radial-gradient(at 0% 0%, var(--bg-mesh-1) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, var(--bg-mesh-2) 0px, transparent 50%);
+  background-attachment: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .hub-container {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 60px 20px;
+  padding: 8vh 20px;
 }
 
 .hub-header {
   text-align: center;
-  margin-bottom: 60px;
+  margin-bottom: 8vh;
+  animation: fadeDown 0.6s ease-out;
+}
+
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .hub-header h1 {
   font-size: clamp(2.5rem, 6vw, 4rem);
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.95);
-  margin: 0 0 15px 0;
-  letter-spacing: -1.5px;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin: 0 0 12px 0;
+  letter-spacing: -1px;
 }
 
 .hub-header p {
-  font-size: clamp(1rem, 3vw, 1.2rem);
-  color: rgba(255, 255, 255, 0.9);
+  font-size: clamp(1.1rem, 3vw, 1.3rem);
+  color: var(--text-muted);
   margin: 0;
   font-weight: 500;
 }
@@ -59,77 +104,91 @@ body {
 /* Grid de Cards */
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
   justify-items: center;
 }
 
 /* Card Style */
 .util-card {
   width: 100%;
-  max-width: 400px;
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  max-width: 360px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--glass-border);
   border-radius: 32px;
-  padding: 30px;
-  box-shadow: 0 10px 40px rgba(31, 38, 135, 0.1);
+  padding: 40px 24px;
+  box-shadow: var(--glass-shadow);
   text-decoration: none;
   color: inherit;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   box-sizing: border-box;
   cursor: pointer;
+  animation: fadeUp 0.6s ease-out backwards;
 }
 
+/* Animação em cascata */
+.util-card:nth-child(1) { animation-delay: 0.1s; }
+.util-card:nth-child(2) { animation-delay: 0.2s; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Interações Táteis (Hover/Active) */
 .util-card:hover {
-  transform: translateY(-10px);
-  background: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 20px 50px rgba(31, 38, 135, 0.2);
-  border-color: rgba(255, 255, 255, 0.7);
+  transform: translateY(-6px);
+  background: var(--glass-bg);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  border-color: var(--accent-color);
+}
+
+.util-card:active {
+  transform: scale(0.97);
 }
 
 .card-icon {
-  width: 120px;
-  height: 120px;
-  border-radius: 28px;
-  margin-bottom: 25px;
+  width: 100px;
+  height: 100px;
+  border-radius: 24px;
+  margin-bottom: 24px;
   object-fit: cover;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  background: rgba(255,255,255,0.5);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+  background: var(--glass-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3rem;
-  color: #fff;
+  color: var(--text-muted);
 }
 
 .util-card h2 {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 600;
-  margin: 0 0 10px 0;
-  color: #1d1d1f;
+  margin: 0 0 8px 0;
 }
 
 .util-card p {
-  font-size: 1rem;
-  color: #444;
+  font-size: 0.95rem;
+  color: var(--text-muted);
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
-/* Card Placeholder (Em breve) */
+/* Placeholder */
 .util-card.disabled {
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 0.6;
+  border: 1px dashed var(--text-muted);
 }
 
 .card-icon.placeholder {
-  border: 2px dashed rgba(255, 255, 255, 0.5);
+  border: none;
   background: transparent;
   box-shadow: none;
 }
@@ -138,24 +197,26 @@ body {
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(5px);
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
   z-index: 9999;
-  padding: 20px;
+  padding: 16px;
 }
 
 .modal-content {
-  background: white;
+  background: var(--modal-bg);
   width: 100%;
   max-width: 400px;
-  border-radius: 24px;
-  padding: 30px 20px;
+  border-radius: 28px;
+  padding: 32px 24px;
   text-align: center;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-  animation: slideUp 0.3s ease-out;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--glass-border);
 }
 
 @keyframes slideUp {
@@ -163,44 +224,33 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
-.modal-icon {
-  font-size: 2.5rem;
-  margin-bottom: 15px;
-}
-
-.modal-title {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.modal-text {
-  font-size: 1rem;
-  color: #555;
-  line-height: 1.5;
-  margin-bottom: 20px;
-}
+.modal-icon { font-size: 3rem; margin-bottom: 16px; }
+.modal-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; }
+.modal-text { font-size: 1rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 24px; }
 
 .modal-btn-primary {
-  background: #007aff;
-  color: white;
+  background: var(--accent-color);
+  color: #fff;
   border: none;
-  padding: 14px 20px;
+  padding: 16px 20px;
   width: 100%;
-  border-radius: 14px;
+  border-radius: 16px;
   font-size: 1.1rem;
   font-weight: 600;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   cursor: pointer;
+  transition: all 0.2s;
 }
+
+.modal-btn-primary:active { transform: scale(0.96); }
 
 .modal-btn-secondary {
   background: transparent;
-  color: #007aff;
+  color: var(--accent-color);
   border: none;
-  padding: 10px;
+  padding: 12px;
   width: 100%;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 500;
   cursor: pointer;
 }
@@ -212,11 +262,8 @@ body {
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Registro do Service Worker para habilitar o PWA no Android
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('./sw.js').then(() => {
-            console.log('Service Worker Registrado');
-          });
+          navigator.serviceWorker.register('./sw.js').catch(()=>{});
         }
 
         function Hub() {
@@ -226,34 +273,22 @@ body {
 
           useEffect(() => {
             window.addEventListener('beforeinstallprompt', (e) => {
-              // Previne o prompt automático do Chrome
               e.preventDefault();
-              // Guarda o evento para dispararmos no clique do card
               setDeferredPrompt(e);
             });
           }, []);
 
           const isIOS = () => {
             return [
-              'iPad Simulator',
-              'iPhone Simulator',
-              'iPod Simulator',
-              'iPad',
-              'iPhone',
-              'iPod'
-            ].includes(navigator.platform)
-            // Detecção para iPad no iOS 13+
-            || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
+              'iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'
+            ].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
           }
 
           const handleCardClick = (e, url) => {
             e.preventDefault();
-            
-            // Verifica se já está instalado (rodando como standalone PWA)
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             
             if (isStandalone) {
-                // Já instalado, abre normalmente
                 window.location.href = url;
                 return;
             }
@@ -262,20 +297,12 @@ body {
                 setTargetUrl(url);
                 setShowIOSModal(true);
             } else if (deferredPrompt) {
-                // Instalação nativa do Android
                 deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('User accepted the A2HS prompt');
-                    } else {
-                        console.log('User dismissed the A2HS prompt');
-                    }
+                deferredPrompt.userChoice.then(() => {
                     setDeferredPrompt(null);
-                    // Vai para o app após a escolha
                     window.location.href = url;
                 });
             } else {
-                // Desktop ou PWA prompt não suportado/já instalado, abre normalmente
                 window.location.href = url;
             }
           };
@@ -284,48 +311,41 @@ body {
             <div className="hub-container">
               <header className="hub-header">
                 <h1>Utilitários</h1>
-                <p>O seu hub central de ferramentas simplificadas e diretas.</p>
+                <p>Produtividade instantânea. Instale e acesse de qualquer lugar.</p>
               </header>
 
               <main className="cards-grid">
                 
-                {/* APK Downloader Card */}
-                <div onClick={(e) => handleCardClick(e, './apk-downloader/')} className="util-card">
+                <div onClick={(e) => handleCardClick(e, './apk-downloader/')} className="util-card" role="button" tabIndex="0">
                   <img src="./assets/apk-downloader.jpg" alt="APK Downloader Logo" className="card-icon" />
                   <h2>APK Downloader</h2>
-                  <p>Extraia pacotes nativos diretamente da Play Store com segurança e escolha a arquitetura ideal.</p>
+                  <p>Extraia pacotes nativos da Play Store de forma segura. Detecta a arquitetura ideal automaticamente.</p>
                 </div>
 
-                {/* Placeholder Card */}
                 <div className="util-card disabled">
                   <div className="card-icon placeholder">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="16"></line>
+                      <line x1="8" y1="12" x2="16" y2="12"></line>
                     </svg>
                   </div>
                   <h2>Em Breve</h2>
-                  <p>Um novo utilitário está sendo construído para esta suíte.</p>
+                  <p>Estamos polindo um novo utilitário. A excelência leva algum tempo.</p>
                 </div>
 
               </main>
 
-              {/* IOS Install Modal */}
               {showIOSModal && (
-                <div className="modal-overlay">
-                  <div className="modal-content">
+                <div className="modal-overlay" onClick={() => setShowIOSModal(false)}>
+                  <div className="modal-content" onClick={e => e.stopPropagation()}>
                     <div className="modal-icon">📱</div>
-                    <h2 className="modal-title">Instale no seu iPhone/iPad</h2>
+                    <h2 className="modal-title">Instale no seu iOS</h2>
                     <p className="modal-text">
-                      Para a melhor experiência, instale este utilitário como um App na sua tela de início.<br/><br/>
-                      Toque no ícone de <b>Compartilhar</b> (quadrado com seta para cima) na barra inferior e depois em <b>"Adicionar à Tela de Início"</b>.
+                      Para usar como um aplicativo nativo, toque no ícone de <b>Compartilhar</b> na barra inferior do Safari e escolha <b>"Adicionar à Tela de Início"</b>.
                     </p>
-                    <button className="modal-btn-primary" onClick={() => setShowIOSModal(false)}>
-                      Entendi
-                    </button>
-                    <button className="modal-btn-secondary" onClick={() => window.location.href = targetUrl}>
-                      Acessar via navegador mesmo
-                    </button>
+                    <button className="modal-btn-primary" onClick={() => setShowIOSModal(false)}>Entendi</button>
+                    <button className="modal-btn-secondary" onClick={() => window.location.href = targetUrl}>Acessar via navegador agora</button>
                   </div>
                 </div>
               )}
