@@ -48,77 +48,75 @@ async def extract_apk(request: URLRequest):
 @app.post("/api/void")
 async def void_download(request: VoidRequest):
     url = request.url
-    
-    # 1. TIKTOK NATIVE BYPASS (TikWM API)
-    # Evita o erro 403 do Varnish e o bloqueio da Oracle Cloud
+    download_url = None
+    title = "Media Extraída (PureVoid)"
+    thumbnail = ""
+
+    # 1. TIKTOK (TikWM API para burlar IP-Lock da Oracle)
     if "tiktok.com" in url.lower():
         try:
             async with httpx.AsyncClient() as client:
                 res = await client.get(f"https://www.tikwm.com/api/?url={url}")
                 data = res.json()
                 if data.get("code") == 0 and "data" in data:
-                    return {
-                        "status": "sucesso",
-                        "title": data["data"].get("title", "TikTok Video"),
-                        "thumbnail": data["data"].get("cover", ""),
-                        "download_link": data["data"].get("play") # Link direto público sem IP-Lock
-                    }
+                    title = data["data"].get("title", title)
+                    thumbnail = data["data"].get("cover", "")
+                    download_url = data["data"].get("play")
                 else:
                     raise Exception("A API do TikTok retornou erro.")
         except Exception as e:
             raise HTTPException(status_code=400, detail="O TikTok bloqueou a extração desse vídeo.")
 
-    # 2. YOUTUBE / OUTROS (yt-dlp + OCI Proxy)
-    ydl_opts = {
-        'format': 'best',
-        'quiet': True,
-        'no_warnings': True,
-        'skip_download': True,
-        'nocheckcertificate': True,
-        'extractor_args': {
-            'youtube': ['player_client=android', 'player_skip=webpage,configs']
-        },
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-    }
-    
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            
-            if 'entries' in info:
-                info = info['entries'][0]
-            
-            title = info.get('title', 'Media Extraída (PureVoid)')
-            download_url = info.get('url')
-            thumbnail = info.get('thumbnail', '')
-            
-            if not download_url:
-                raise Exception("URL de download direto não encontrada.")
-            
-            # Forçamos TODOS os outros sites (Youtube, Insta, etc) a passar pelo proxy da OCI 
-            # para resolver o IP-Lock (Varnish cache error)
-            safe_url = urllib.parse.quote(download_url, safe='')
-            final_link = f"https://twist-associate-mazda-mostly.trycloudflare.com/api/proxy?video_url={safe_url}"
-            
-            return {
-                "status": "sucesso",
-                "title": title,
-                "thumbnail": thumbnail,
-                "download_link": final_link
+    # 2. YOUTUBE / OUTROS (yt-dlp)
+    else:
+        ydl_opts = {
+            'format': 'best',
+            'quiet': True,
+            'no_warnings': True,
+            'skip_download': True,
+            'nocheckcertificate': True,
+            'extractor_args': {
+                'youtube': ['player_client=android', 'player_skip=webpage,configs']
+            },
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             }
-    except Exception as e:
-        error_str = str(e)
-        if "Sign in to confirm" in error_str:
-            raise HTTPException(status_code=403, detail="O YouTube bloqueou a extração. Tente outro link.")
-        raise HTTPException(status_code=400, detail=f"Erro ao extrair mídia: {error_str}")
+        }
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                if 'entries' in info:
+                    info = info['entries'][0]
+                title = info.get('title', title)
+                download_url = info.get('url')
+                thumbnail = info.get('thumbnail', '')
+        except Exception as e:
+            error_str = str(e)
+            if "Sign in to confirm" in error_str:
+                raise HTTPException(status_code=403, detail="O YouTube bloqueou a extração. Tente outro link.")
+            raise HTTPException(status_code=400, detail=f"Erro ao extrair mídia: {error_str}")
+
+    if not download_url:
+        raise HTTPException(status_code=400, detail="URL de download direto não encontrada.")
+
+    # OBRIGATÓRIO: Passar TODOS os links pelo Túnel Proxy OCI.
+    # Motivo: Se não passarmos pelo proxy, o link da CDN (TikTok/Insta) abrirá 
+    # o vídeo no Player do Navegador. O Proxy injeta 'Content-Disposition: attachment',
+    # forçando o celular/PC a INICIAR O DOWNLOAD IMEDIATAMENTE (salvar na galeria).
+    safe_url = urllib.parse.quote(download_url, safe='')
+    final_link = f"https://twist-associate-mazda-mostly.trycloudflare.com/api/proxy?video_url={safe_url}"
+    
+    return {
+        "status": "sucesso",
+        "title": title,
+        "thumbnail": thumbnail,
+        "download_link": final_link
+    }
 
 @app.get("/api/proxy")
 async def proxy_video(video_url: str):
     async def stream_generator():
         async with httpx.AsyncClient(follow_redirects=True) as client:
-            # Passamos headers simulando um navegador real
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "*/*"
@@ -129,7 +127,7 @@ async def proxy_video(video_url: str):
                     async for chunk in response.aiter_bytes(chunk_size=8192):
                         yield chunk
             except httpx.HTTPStatusError as e:
-                yield f"Erro ao acessar CDN do video no Proxy OCI: {str(e)}".encode()
+                yield f"Erro no proxy OCI (Video inacessivel): {str(e)}".encode()
 
     return StreamingResponse(stream_generator(), media_type="video/mp4", headers={
         "Content-Disposition": "attachment; filename=\"purevoid_media.mp4\""
