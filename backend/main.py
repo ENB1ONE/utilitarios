@@ -2,6 +2,7 @@
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import re
+import yt_dlp
 
 app = FastAPI(title="APK Downloader API")
 
@@ -17,6 +18,9 @@ app.add_middleware(
 class URLRequest(BaseModel):
     playstore_url: str
 
+class VoidRequest(BaseModel):
+    url: str
+
 @app.post("/api/download")
 async def extract_apk(request: URLRequest):
     url = request.playstore_url
@@ -26,7 +30,6 @@ async def extract_apk(request: URLRequest):
     
     package_name = url.split("id=")[1].split("&")[0]
     
-    # Criando opções arquiteturais dinâmicas para o pacote solicitado
     versions = [
         {
             "id": 1,
@@ -57,3 +60,38 @@ async def extract_apk(request: URLRequest):
         "message": "Opções extraídas com sucesso.",
         "versions": versions
     }
+
+@app.post("/api/void")
+async def void_download(request: VoidRequest):
+    url = request.url
+    
+    ydl_opts = {
+        'format': 'best',
+        'quiet': True,
+        'no_warnings': True,
+        'skip_download': True, # Nós só queremos a URL real
+    }
+    
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            
+            # Se for uma playlist, pega o primeiro
+            if 'entries' in info:
+                info = info['entries'][0]
+            
+            title = info.get('title', 'Media Extraída (PureVoid)')
+            download_url = info.get('url')
+            thumbnail = info.get('thumbnail', '')
+            
+            if not download_url:
+                raise Exception("URL de download direto não encontrada.")
+            
+            return {
+                "status": "sucesso",
+                "title": title,
+                "thumbnail": thumbnail,
+                "download_link": download_url
+            }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Erro ao extrair mídia: Não suportado ou privado. Detalhe: {str(e)}")
