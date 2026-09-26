@@ -1,7 +1,7 @@
 ﻿from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 import re
 import yt_dlp
 import httpx
@@ -77,14 +77,22 @@ async def void_download(request: VoidRequest):
             if not download_url:
                 raise Exception("URL de download direto não encontrada.")
             
-            safe_url = urllib.parse.quote(download_url, safe='')
-            proxy_link = f"https://twist-associate-mazda-mostly.trycloudflare.com/api/proxy?video_url={safe_url}"
+            # O YouTube bloqueia por IP (IP-Lock), então precisa passar pelo nosso proxy.
+            # TikTok e Instagram NÃO possuem IP-Lock rigoroso, e o CDN deles bloqueia requisições do nosso proxy (OCI IP).
+            # Então para não YouTube, retornamos o link direto!
+            is_youtube = 'youtube.com' in url.lower() or 'youtu.be' in url.lower()
+            
+            if is_youtube:
+                safe_url = urllib.parse.quote(download_url, safe='')
+                final_link = f"https://twist-associate-mazda-mostly.trycloudflare.com/api/proxy?video_url={safe_url}"
+            else:
+                final_link = download_url
             
             return {
                 "status": "sucesso",
                 "title": title,
                 "thumbnail": thumbnail,
-                "download_link": proxy_link
+                "download_link": final_link
             }
     except Exception as e:
         error_str = str(e)
@@ -94,17 +102,20 @@ async def void_download(request: VoidRequest):
 
 @app.get("/api/proxy")
 async def proxy_video(video_url: str):
-    # Proxy totalmente assíncrono para não travar o Cloudflare (Erro 520)
     async def stream_generator():
         async with httpx.AsyncClient(follow_redirects=True) as client:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Referer": "https://www.tiktok.com/"
             }
-            async with client.stream("GET", video_url, headers=headers) as response:
-                response.raise_for_status()
-                async for chunk in response.aiter_bytes(chunk_size=8192):
-                    yield chunk
+            try:
+                async with client.stream("GET", video_url, headers=headers) as response:
+                    response.raise_for_status()
+                    async for chunk in response.aiter_bytes(chunk_size=8192):
+                        yield chunk
+            except httpx.HTTPStatusError as e:
+                # Retorna erro limpo em vez de quebrar a API (evita o 502/520 no Cloudflare)
+                yield f"Erro ao acessar CDN do video: {str(e)}".encode()
 
     return StreamingResponse(stream_generator(), media_type="video/mp4", headers={
         "Content-Disposition": "attachment; filename=\"purevoid_media.mp4\""
