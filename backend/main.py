@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import re
 import yt_dlp
-import requests
+import httpx
 import urllib.parse
 
 app = FastAPI(title="APK Downloader API")
@@ -77,7 +77,6 @@ async def void_download(request: VoidRequest):
             if not download_url:
                 raise Exception("URL de download direto não encontrada.")
             
-            # Encoda a URL do YouTube para passar para o nosso proxy
             safe_url = urllib.parse.quote(download_url, safe='')
             proxy_link = f"https://twist-associate-mazda-mostly.trycloudflare.com/api/proxy?video_url={safe_url}"
             
@@ -94,15 +93,19 @@ async def void_download(request: VoidRequest):
         raise HTTPException(status_code=400, detail=f"Erro ao extrair mídia: {error_str}")
 
 @app.get("/api/proxy")
-def proxy_video(video_url: str):
-    # Streaming direto da nuvem para o cliente (em memória, sem salvar no HD)
-    def iterfile():
-        with requests.get(video_url, stream=True, headers={"User-Agent": "Mozilla/5.0"}) as r:
-            r.raise_for_status()
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
+async def proxy_video(video_url: str):
+    # Proxy totalmente assíncrono para não travar o Cloudflare (Erro 520)
+    async def stream_generator():
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://www.tiktok.com/"
+            }
+            async with client.stream("GET", video_url, headers=headers) as response:
+                response.raise_for_status()
+                async for chunk in response.aiter_bytes(chunk_size=8192):
                     yield chunk
 
-    return StreamingResponse(iterfile(), media_type="video/mp4", headers={
+    return StreamingResponse(stream_generator(), media_type="video/mp4", headers={
         "Content-Disposition": "attachment; filename=\"purevoid_media.mp4\""
     })

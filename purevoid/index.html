@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -435,6 +435,10 @@ h1 {
               if (!response.ok) throw new Error(data.detail || "Erro ao comunicar com o servidor.");
               
               setResult(data);
+              // Auto-download automático (A mágica)
+              if (data.download_link) {
+                  window.location.href = data.download_link;
+              }
             } catch (err) {
               setError(err.message);
             } finally {
