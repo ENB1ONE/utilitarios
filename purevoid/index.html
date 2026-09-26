@@ -434,11 +434,11 @@ h1 {
               const data = await response.json();
               if (!response.ok) throw new Error(data.detail || "Erro ao comunicar com o servidor.");
               
-              setResult(data);
-              // Auto-download automático (A mágica)
+              // Auto-download automático direto (Magia Pura, sem tela de preview)
               if (data.download_link) {
                   window.location.href = data.download_link;
               }
+              // Não chamamos setResult(data) para manter o usuário na tela inicial
             } catch (err) {
               setError(err.message);
             } finally {
