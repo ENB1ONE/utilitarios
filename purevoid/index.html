@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -16,353 +16,86 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-:root {
-  --bg-color: #f5f5f7;
-  --bg-mesh-1: rgba(0, 122, 255, 0.12);
-  --bg-mesh-2: rgba(191, 90, 242, 0.12);
-  --text-main: #1d1d1f;
-  --text-muted: #86868b;
-  --glass-bg: rgba(255, 255, 255, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.6);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-  --accent-color: #7b2cbf;
-  --accent-hover: #5a189a;
-  --card-bg: #ffffff;
-  --modal-bg: #ffffff;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-color: #000000;
-    --bg-mesh-1: rgba(10, 132, 255, 0.15);
-    --bg-mesh-2: rgba(94, 92, 230, 0.15);
-    --text-main: #f5f5f7;
-    --text-muted: #a1a1a6;
-    --glass-bg: rgba(28, 28, 30, 0.65);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    --accent-color: #9d4edd;
-    --accent-hover: #c77dff;
-    --card-bg: #1c1c1e;
-    --modal-bg: #1c1c1e;
-  }
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
-  background-color: var(--bg-color);
-  background-image: 
-    radial-gradient(at 0% 0%, var(--bg-mesh-1) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, var(--bg-mesh-2) 0px, transparent 50%);
-  background-attachment: fixed;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
-}
-
-.search-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 24px;
-  box-sizing: border-box;
-  padding-bottom: 80px; /* space for install banner */
-}
-
-.search-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  max-width: 600px;
-  animation: fadeDown 0.6s ease-out;
-}
-
-@keyframes fadeDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Big Blackhole Button */
-.blackhole-btn {
-  width: 160px;
-  height: 160px;
-  border-radius: 40px;
-  background: var(--glass-bg);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.2);
-  margin: 0 auto 40px auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
-  position: relative;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.blackhole-btn:active {
-  transform: scale(0.92);
-}
-
-.blackhole-btn img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-}
-
-/* Pulsing effect for loading */
-.pulsing {
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(0.95); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-h1 {
-  font-size: clamp(2rem, 5vw, 3rem);
-  font-weight: 700;
-  margin: 0 0 12px 0;
-  text-align: center;
-  letter-spacing: -1px;
-}
-
-.subtitle {
-  color: var(--text-muted);
-  font-size: clamp(0.95rem, 2.5vw, 1.1rem);
-  margin-bottom: 30px;
-  text-align: center;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.search-bar {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  background: var(--glass-bg);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid var(--glass-border);
-  border-radius: 40px;
-  padding: 8px 12px 8px 24px;
-  box-shadow: var(--glass-shadow);
-  transition: all 0.3s;
-  box-sizing: border-box;
-}
-
-.search-bar:focus-within {
-  transform: translateY(-4px);
-  border-color: var(--accent-color);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
-}
-
-.search-icon {
-  width: 24px; height: 24px; min-width: 24px;
-  fill: none; stroke: var(--text-muted); stroke-width: 2;
-  stroke-linecap: round; stroke-linejoin: round;
-  margin-right: 15px;
-}
-
-.search-input {
-  flex-grow: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 1.1rem;
-  color: var(--text-main);
-  width: 100%;
-}
-.search-input::placeholder { color: var(--text-muted); }
-
-.download-btn {
-  background: var(--accent-color);
-  color: white;
-  border: none;
-  border-radius: 30px;
-  padding: 14px 28px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.download-btn:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-2px); }
-.download-btn:active:not(:disabled) { transform: scale(0.96); }
-.download-btn:disabled { background: var(--text-muted); opacity: 0.5; cursor: not-allowed; }
-
-.error-text {
-  color: #ff3b30;
-  background: rgba(255, 59, 48, 0.1);
-  border: 1px solid rgba(255, 59, 48, 0.2);
-  margin-top: 24px;
-  padding: 16px;
-  border-radius: 16px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  text-align: center;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Results Panel */
-.results-panel {
-  width: 100%;
-  background: var(--glass-bg);
-  backdrop-filter: blur(40px);
-  border-radius: 32px;
-  border: 1px solid var(--glass-border);
-  padding: 40px;
-  margin-top: 20px;
-  box-shadow: var(--glass-shadow);
-  box-sizing: border-box;
-  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  text-align: center;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(40px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.media-thumbnail {
-  width: 100%;
-  max-width: 320px;
-  border-radius: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.15);
-}
-
-.results-header h2 { margin: 0 0 8px 0; font-size: 1.5rem; }
-
-.action-btn {
-  background: var(--accent-color);
-  color: white;
-  text-decoration: none;
-  padding: 16px 32px;
-  border-radius: 30px;
-  font-weight: 600;
-  font-size: 1.1rem;
-  transition: all 0.2s;
-  display: inline-block;
-  margin-top: 10px;
-}
-.action-btn:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(123, 44, 191, 0.3); }
-.action-btn:active { transform: scale(0.96); }
-
-.btn-back {
-  background: transparent;
-  color: var(--text-muted);
-  border: none;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 8px 16px;
-  margin-bottom: 24px;
-  border-radius: 20px;
-  transition: background 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.btn-back:hover { background: rgba(134, 134, 139, 0.1); color: var(--text-main); }
-
-/* Install Banner */
-.install-banner {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--glass-border);
-  padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 1000;
-  animation: slideUp 0.5s ease-out;
-  padding-bottom: env(safe-area-inset-bottom, 16px);
-}
-
-.install-text {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--text-main);
-  margin: 0;
-}
-.install-text span {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.install-btn {
-  background: var(--text-main);
-  color: var(--bg-color);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-/* Modal iOS */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 9999;
-  padding: 16px;
-}
-
-.modal-content {
-  background: var(--modal-bg);
-  width: 100%;
-  max-width: 400px;
-  border-radius: 28px;
-  padding: 32px 24px;
-  text-align: center;
-  box-shadow: 0 24px 48px rgba(0,0,0,0.2);
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid var(--glass-border);
-}
-.modal-btn-primary {
-  background: var(--accent-color);
-  color: #fff;
-  border: none;
-  padding: 16px 20px;
-  width: 100%;
-  border-radius: 16px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-top: 12px;
-  cursor: pointer;
-}
-
-@media (max-width: 600px) {
-  .search-container { padding: 16px; padding-bottom: 80px; }
-  .search-bar { flex-direction: column; border-radius: 24px; padding: 16px; gap: 16px; }
-  .search-icon { display: none; }
-  .search-input { text-align: center; }
-  .download-btn { width: 100%; padding: 16px; }
-  .results-panel { padding: 24px; border-radius: 24px; }
-  .action-btn { width: 100%; box-sizing: border-box; }
-}
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background-color: #000000;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+        color: #ffffff;
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+      }
+      .app-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+        flex-direction: column;
+      }
+      .blackhole-btn {
+        width: 250px;
+        height: 250px;
+        background: transparent;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .blackhole-btn:active {
+        transform: scale(0.92);
+      }
+      .blackhole-btn img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        pointer-events: none;
+      }
+      .pulsing {
+        animation: pulse 1s infinite alternate;
+      }
+      @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+        100% { transform: scale(0.85); opacity: 0.7; filter: brightness(1.5); }
+      }
+      .error-text {
+        color: #ff3b30;
+        margin-top: 30px;
+        font-size: 1rem;
+        font-weight: 500;
+        text-align: center;
+        width: 100%;
+        max-width: 80%;
+      }
+      .install-banner {
+        position: fixed; bottom: 0; left: 0; width: 100%;
+        background: rgba(28, 28, 30, 0.85);
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        padding: 16px 24px; display: flex; justify-content: space-between;
+        align-items: center; box-sizing: border-box; z-index: 100;
+      }
+      .install-text { margin: 0; font-size: 0.95rem; font-weight: 600; color: #ffffff; }
+      .install-text span { display: block; font-size: 0.8rem; font-weight: 400; color: #a1a1a6; margin-top: 2px; }
+      .install-btn {
+        background: #ffffff; color: #000000; border: none; border-radius: 20px;
+        padding: 8px 16px; font-weight: 700; font-size: 0.9rem; cursor: pointer;
+      }
+      .modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;
+        z-index: 1000; padding: 20px;
+      }
+      .modal-content {
+        background: #1c1c1e; padding: 24px; border-radius: 24px; width: 100%;
+        max-width: 320px; text-align: center; color: white;
+      }
+      .modal-btn-primary {
+        background: white; color: black; border: none; padding: 12px 0;
+        width: 100%; border-radius: 12px; font-size: 1rem; font-weight: 600; margin-top: 16px;
+      }
     </style>
 </head>
 <body>
@@ -371,28 +104,17 @@ h1 {
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // PWA Registration
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('../sw.js').catch(()=>{});
-        }
-
         function App() {
-          const [url, setUrl] = useState('');
           const [isLoading, setIsLoading] = useState(false);
           const [error, setError] = useState('');
-          const [result, setResult] = useState(null);
           
-          // PWA Install States
           const [deferredPrompt, setDeferredPrompt] = useState(null);
           const [showIOSModal, setShowIOSModal] = useState(false);
           const [showBanner, setShowBanner] = useState(false);
 
           useEffect(() => {
-            // Check standalone
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            if (!isStandalone) {
-                setShowBanner(true);
-            }
+            if (!isStandalone) setShowBanner(true);
 
             window.addEventListener('beforeinstallprompt', (e) => {
               e.preventDefault();
@@ -401,26 +123,19 @@ h1 {
           }, []);
 
           const isIOS = () => {
-            return [
-              'iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'
-            ].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
+            return ['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
           }
 
           const handleInstallClick = () => {
-             if (isIOS()) {
-                 setShowIOSModal(true);
-             } else if (deferredPrompt) {
+             if (isIOS()) setShowIOSModal(true);
+             else if (deferredPrompt) {
                  deferredPrompt.prompt();
-                 deferredPrompt.userChoice.then(() => {
-                     setDeferredPrompt(null);
-                     setShowBanner(false);
-                 });
+                 deferredPrompt.userChoice.then(() => { setDeferredPrompt(null); setShowBanner(false); });
              } else {
-                 alert("Instruções: No menu do navegador, procure por 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial'.");
+                 alert("Instruções: Procure por 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial'.");
              }
           }
 
-          // Fetch API
           const processDownload = async (targetUrl) => {
             if (!targetUrl) return;
             setIsLoading(true);
@@ -433,118 +148,56 @@ h1 {
                 body: JSON.stringify({ url: targetUrl }),
               });
               const data = await response.json();
-              if (!response.ok) throw new Error(data.detail || "Erro ao comunicar com o servidor.");
+              if (!response.ok) throw new Error(data.detail || "Erro ao servidor.");
               
-              // Auto-download automático direto (Magia Pura, sem tela de preview)
               if (data.download_link) {
                   window.location.href = data.download_link;
               }
-              // Não chamamos setResult(data) para manter o usuário na tela inicial
             } catch (err) {
               setError(err.message);
+              setTimeout(() => setError(''), 4000);
             } finally {
               setIsLoading(false);
             }
           };
 
-          const handleFormSubmit = (e) => {
-            e.preventDefault();
-            processDownload(url);
+          const handleMagicClick = async () => {
+            if (isLoading) return;
+            try {
+              const text = await navigator.clipboard.readText();
+              if (text && (text.includes("http://") || text.includes("https://"))) {
+                processDownload(text);
+              } else {
+                setError("Nenhum link válido encontrado na área de transferência.");
+                setTimeout(() => setError(''), 4000);
+              }
+            } catch (err) {
+                setError("Permissão para ler a área de transferência negada.");
+                setTimeout(() => setError(''), 4000);
+            }
           };
 
-          // O "Magic Click" do Blackhole
-          const handleMagicClick = async () => {
-             if (isLoading) return;
-             
-             try {
-                const text = await navigator.clipboard.readText();
-                if (!text || !text.trim().startsWith('http')) {
-                    setError("Copie um link primeiro. A área de transferência está vazia ou inválida.");
-                    return;
-                }
-                setUrl(text.trim());
-                processDownload(text.trim());
-             } catch (err) {
-                // Se o navegador bloquear, pede para a pessoa colar no input (fallback)
-                setError("O navegador bloqueou a leitura da área de transferência. Cole o link manualmente abaixo.");
-             }
-          }
-
           return (
-            <div className="search-container">
-              <div className="search-wrapper">
-                
-                {!result ? (
-                  <React.Fragment>
-                    {/* Botão Mágico (Blackhole UX) */}
-                    <div className="blackhole-btn" onClick={handleMagicClick} title="Clique para colar e extrair magicamente">
-                      <img src="../assets/purevoid-icon.png" alt="PureVoid" className={isLoading ? "pulsing" : ""} />
-                    </div>
-
-                    <h1>PureVoid</h1>
-                    <p className="subtitle">
-                        A mágica acontece aqui.<br/>
-                        Copie qualquer link (Insta, TikTok, YouTube) e <b>toque no ícone acima</b> para sugar a mídia, ou cole abaixo.
-                    </p>
-                    
-                    <form className="search-bar" onSubmit={handleFormSubmit}>
-                      <svg className="search-icon" viewBox="0 0 24 24">
-                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                      </svg>
-                      
-                      <input 
-                        type="text" className="search-input" 
-                        placeholder="Ou cole o link manualmente..." 
-                        autoComplete="off" value={url} onChange={(e) => setUrl(e.target.value)}
-                        disabled={isLoading}
-                      />
-                      
-                      <button type="submit" className="download-btn" disabled={isLoading || !url.trim()}>
-                        {isLoading ? 'Sugando...' : 'Extrair'}
-                      </button>
-                    </form>
-                    {error && <div className="error-text">{error}</div>}
-                  </React.Fragment>
-                ) : (
-                  <div className="results-panel">
-                    <button onClick={() => {setResult(null); setUrl('');}} className="btn-back">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                      Novo Link
-                    </button>
-                    
-                    <div className="results-header">
-                      {result.thumbnail && <img src={result.thumbnail} alt="Thumbnail" className="media-thumbnail" />}
-                      <h2>{result.title}</h2>
-                      <p>Mídia extraída com sucesso. Zero anúncios.</p>
-                    </div>
-
-                    <a href={result.download_link} target="_blank" rel="noopener noreferrer" className="action-btn">
-                      Baixar Arquivo
-                    </a>
-                  </div>
-                )}
+            <div className="app-container">
+              <div className="blackhole-btn" onClick={handleMagicClick}>
+                <img src="../assets/purevoid-icon.png" alt="PureVoid" className={isLoading ? "pulsing" : ""} />
               </div>
+              
+              {error && <div className="error-text">{error}</div>}
 
-              {/* Banner Fixo de Instalação (se não for PWA) */}
               {showBanner && (
                   <div className="install-banner">
-                      <p className="install-text">
-                        Instale o PureVoid <span>Rápido. Nativo. Sem anúncios.</span>
-                      </p>
-                      <button className="install-btn" onClick={handleInstallClick}>
-                        Instalar
-                      </button>
+                      <p className="install-text">Instale o PureVoid <span>Rápido. Nativo. Sem anúncios.</span></p>
+                      <button className="install-btn" onClick={handleInstallClick}>Instalar</button>
                   </div>
               )}
 
-              {/* Modal iOS (Se o usuário clicar no banner no iPhone) */}
               {showIOSModal && (
                 <div className="modal-overlay" onClick={() => setShowIOSModal(false)}>
                   <div className="modal-content" onClick={e => e.stopPropagation()}>
                     <h2 style={{marginTop:0}}>Instale no iOS</h2>
-                    <p style={{color: 'var(--text-muted)', lineHeight: '1.5'}}>
-                      Para instalar o PureVoid como app nativo, toque no ícone de <b>Compartilhar</b> do Safari e escolha <b>"Adicionar à Tela de Início"</b>.
+                    <p style={{color: '#a1a1a6', lineHeight: '1.5'}}>
+                      Toque em <b>Compartilhar</b> no Safari e escolha <b>"Adicionar à Tela de Início"</b>.
                     </p>
                     <button className="modal-btn-primary" onClick={() => setShowIOSModal(false)}>Entendi</button>
                   </div>
