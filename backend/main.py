@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -129,6 +129,6 @@ async def proxy_video(video_url: str):
             except httpx.HTTPStatusError as e:
                 yield f"Erro no proxy OCI (Video inacessivel): {str(e)}".encode()
 
-    return StreamingResponse(stream_generator(), media_type="video/mp4", headers={
+    return StreamingResponse(stream_generator(), media_type="application/octet-stream", headers={
         "Content-Disposition": "attachment; filename=\"purevoid_media.mp4\""
     })
