@@ -1,0 +1,21 @@
+﻿{
+  "name": "Utilitários Hub",
+  "short_name": "UtilHub",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fbc2eb",
+  "theme_color": "#007aff",
+  "description": "Seu hub central de ferramentas e utilitários",
+  "icons": [
+    {
+      "src": "assets/apk-downloader.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "assets/apk-downloader.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

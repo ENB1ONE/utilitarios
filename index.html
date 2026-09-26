@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Utilitários Hub</title>
     
+    <!-- PWA Manifest & iOS Meta tags -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="UtilHub">
+    <link rel="apple-touch-icon" href="./assets/apk-downloader.jpg">
+
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -76,6 +83,7 @@ body {
   align-items: center;
   text-align: center;
   box-sizing: border-box;
+  cursor: pointer;
 }
 
 .util-card:hover {
@@ -125,13 +133,153 @@ body {
   background: transparent;
   box-shadow: none;
 }
+
+/* Modal iOS */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 24px;
+  padding: 30px 20px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-icon {
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+}
+
+.modal-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.modal-text {
+  font-size: 1rem;
+  color: #555;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.modal-btn-primary {
+  background: #007aff;
+  color: white;
+  border: none;
+  padding: 14px 20px;
+  width: 100%;
+  border-radius: 14px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.modal-btn-secondary {
+  background: transparent;
+  color: #007aff;
+  border: none;
+  padding: 10px;
+  width: 100%;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+}
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Registro do Service Worker para habilitar o PWA no Android
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('./sw.js').then(() => {
+            console.log('Service Worker Registrado');
+          });
+        }
+
         function Hub() {
+          const [deferredPrompt, setDeferredPrompt] = useState(null);
+          const [showIOSModal, setShowIOSModal] = useState(false);
+          const [targetUrl, setTargetUrl] = useState('');
+
+          useEffect(() => {
+            window.addEventListener('beforeinstallprompt', (e) => {
+              // Previne o prompt automático do Chrome
+              e.preventDefault();
+              // Guarda o evento para dispararmos no clique do card
+              setDeferredPrompt(e);
+            });
+          }, []);
+
+          const isIOS = () => {
+            return [
+              'iPad Simulator',
+              'iPhone Simulator',
+              'iPod Simulator',
+              'iPad',
+              'iPhone',
+              'iPod'
+            ].includes(navigator.platform)
+            // Detecção para iPad no iOS 13+
+            || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
+          }
+
+          const handleCardClick = (e, url) => {
+            e.preventDefault();
+            
+            // Verifica se já está instalado (rodando como standalone PWA)
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            
+            if (isStandalone) {
+                // Já instalado, abre normalmente
+                window.location.href = url;
+                return;
+            }
+
+            if (isIOS()) {
+                setTargetUrl(url);
+                setShowIOSModal(true);
+            } else if (deferredPrompt) {
+                // Instalação nativa do Android
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the A2HS prompt');
+                    } else {
+                        console.log('User dismissed the A2HS prompt');
+                    }
+                    setDeferredPrompt(null);
+                    // Vai para o app após a escolha
+                    window.location.href = url;
+                });
+            } else {
+                // Desktop ou PWA prompt não suportado/já instalado, abre normalmente
+                window.location.href = url;
+            }
+          };
+
           return (
             <div className="hub-container">
               <header className="hub-header">
@@ -142,11 +290,11 @@ body {
               <main className="cards-grid">
                 
                 {/* APK Downloader Card */}
-                <a href="./apk-downloader/" className="util-card">
+                <div onClick={(e) => handleCardClick(e, './apk-downloader/')} className="util-card">
                   <img src="./assets/apk-downloader.jpg" alt="APK Downloader Logo" className="card-icon" />
                   <h2>APK Downloader</h2>
                   <p>Extraia pacotes nativos diretamente da Play Store com segurança e escolha a arquitetura ideal.</p>
-                </a>
+                </div>
 
                 {/* Placeholder Card */}
                 <div className="util-card disabled">
@@ -161,6 +309,26 @@ body {
                 </div>
 
               </main>
+
+              {/* IOS Install Modal */}
+              {showIOSModal && (
+                <div className="modal-overlay">
+                  <div className="modal-content">
+                    <div className="modal-icon">📱</div>
+                    <h2 className="modal-title">Instale no seu iPhone/iPad</h2>
+                    <p className="modal-text">
+                      Para a melhor experiência, instale este utilitário como um App na sua tela de início.<br/><br/>
+                      Toque no ícone de <b>Compartilhar</b> (quadrado com seta para cima) na barra inferior e depois em <b>"Adicionar à Tela de Início"</b>.
+                    </p>
+                    <button className="modal-btn-primary" onClick={() => setShowIOSModal(false)}>
+                      Entendi
+                    </button>
+                    <button className="modal-btn-secondary" onClick={() => window.location.href = targetUrl}>
+                      Acessar via navegador mesmo
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         }
