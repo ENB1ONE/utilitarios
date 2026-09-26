@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -10,10 +10,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PureVoid">
     <link rel="apple-touch-icon" href="icon-512.png">
-
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
       body {
@@ -69,6 +65,11 @@
         text-align: center;
         width: 100%;
         max-width: 80%;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .error-text.visible {
+        opacity: 1;
       }
       .install-banner {
         position: fixed; bottom: 0; left: 0; width: 100%;
@@ -96,119 +97,136 @@
         background: white; color: black; border: none; padding: 12px 0;
         width: 100%; border-radius: 12px; font-size: 1rem; font-weight: 600; margin-top: 16px;
       }
+      .hidden {
+        display: none !important;
+      }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div class="app-container">
+        <div class="blackhole-btn" id="magicBtn">
+            <img src="../assets/purevoid-hd.jpg" alt="PureVoid" id="magicIcon" />
+        </div>
+        
+        <div class="error-text" id="errorText"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+        <div class="install-banner hidden" id="installBanner">
+            <p class="install-text">Instale o PureVoid <span>Rápido. Nativo. Sem anúncios.</span></p>
+            <button class="install-btn" id="installBtn">Instalar</button>
+        </div>
 
-        function App() {
-          const [isLoading, setIsLoading] = useState(false);
-          const [error, setError] = useState('');
-          
-          const [deferredPrompt, setDeferredPrompt] = useState(null);
-          const [showIOSModal, setShowIOSModal] = useState(false);
-          const [showBanner, setShowBanner] = useState(false);
+        <div class="modal-overlay hidden" id="iosModal">
+            <div class="modal-content" id="iosModalContent">
+            <h2 style="margin-top:0">Instale no iOS</h2>
+            <p style="color: #a1a1a6; line-height: 1.5">
+                Toque em <b>Compartilhar</b> no Safari e escolha <b>"Adicionar à Tela de Início"</b>.
+            </p>
+            <button class="modal-btn-primary" id="closeIosModalBtn">Entendi</button>
+            </div>
+        </div>
+    </div>
 
-          useEffect(() => {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let deferredPrompt = null;
+            let isLoading = false;
+
+            const magicBtn = document.getElementById('magicBtn');
+            const magicIcon = document.getElementById('magicIcon');
+            const errorText = document.getElementById('errorText');
+            const installBanner = document.getElementById('installBanner');
+            const installBtn = document.getElementById('installBtn');
+            const iosModal = document.getElementById('iosModal');
+            const iosModalContent = document.getElementById('iosModalContent');
+            const closeIosModalBtn = document.getElementById('closeIosModalBtn');
+
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            if (!isStandalone) setShowBanner(true);
+            if (!isStandalone) {
+                installBanner.classList.remove('hidden');
+            }
 
             window.addEventListener('beforeinstallprompt', (e) => {
-              e.preventDefault();
-              setDeferredPrompt(e);
+                e.preventDefault();
+                deferredPrompt = e;
             });
-          }, []);
 
-          const isIOS = () => {
-            return ['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document)
-          }
+            const isIOS = () => {
+                return ['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+            };
 
-          const handleInstallClick = () => {
-             if (isIOS()) setShowIOSModal(true);
-             else if (deferredPrompt) {
-                 deferredPrompt.prompt();
-                 deferredPrompt.userChoice.then(() => { setDeferredPrompt(null); setShowBanner(false); });
-             } else {
-                 alert("Instruções: Procure por 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial'.");
-             }
-          }
+            const showError = (msg) => {
+                errorText.textContent = msg;
+                errorText.classList.add('visible');
+                setTimeout(() => {
+                    errorText.classList.remove('visible');
+                }, 4000);
+            };
 
-          const processDownload = async (targetUrl) => {
-            if (!targetUrl) return;
-            setIsLoading(true);
-            setError('');
-            
-            try {
-              const response = await fetch('https://twist-associate-mazda-mostly.trycloudflare.com/api/void', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: targetUrl }),
-              });
-              const data = await response.json();
-              if (!response.ok) throw new Error(data.detail || "Erro ao servidor.");
-              
-              if (data.download_link) {
-                  window.location.href = data.download_link;
-              }
-            } catch (err) {
-              setError(err.message);
-              setTimeout(() => setError(''), 4000);
-            } finally {
-              setIsLoading(false);
-            }
-          };
+            installBtn.addEventListener('click', () => {
+                if (isIOS()) {
+                    iosModal.classList.remove('hidden');
+                } else if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(() => { 
+                        deferredPrompt = null; 
+                        installBanner.classList.add('hidden'); 
+                    });
+                } else {
+                    alert("Instruções: Procure por 'Instalar Aplicativo' ou 'Adicionar à Tela Inicial' no menu do navegador.");
+                }
+            });
 
-          const handleMagicClick = async () => {
-            if (isLoading) return;
-            try {
-              const text = await navigator.clipboard.readText();
-              if (text && (text.includes("http://") || text.includes("https://"))) {
-                processDownload(text);
-              } else {
-                setError("Nenhum link válido encontrado na área de transferência.");
-                setTimeout(() => setError(''), 4000);
-              }
-            } catch (err) {
-                setError("Permissão para ler a área de transferência negada.");
-                setTimeout(() => setError(''), 4000);
-            }
-          };
+            closeIosModalBtn.addEventListener('click', () => {
+                iosModal.classList.add('hidden');
+            });
 
-          return (
-            <div className="app-container">
-              <div className="blackhole-btn" onClick={handleMagicClick}>
-                <img src="../assets/purevoid-hd.jpg" alt="PureVoid" className={isLoading ? "pulsing" : ""} />
-              </div>
-              
-              {error && <div className="error-text">{error}</div>}
+            iosModal.addEventListener('click', () => {
+                iosModal.classList.add('hidden');
+            });
 
-              {showBanner && (
-                  <div className="install-banner">
-                      <p className="install-text">Instale o PureVoid <span>Rápido. Nativo. Sem anúncios.</span></p>
-                      <button className="install-btn" onClick={handleInstallClick}>Instalar</button>
-                  </div>
-              )}
+            iosModalContent.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
 
-              {showIOSModal && (
-                <div className="modal-overlay" onClick={() => setShowIOSModal(false)}>
-                  <div className="modal-content" onClick={e => e.stopPropagation()}>
-                    <h2 style={{marginTop:0}}>Instale no iOS</h2>
-                    <p style={{color: '#a1a1a6', lineHeight: '1.5'}}>
-                      Toque em <b>Compartilhar</b> no Safari e escolha <b>"Adicionar à Tela de Início"</b>.
-                    </p>
-                    <button className="modal-btn-primary" onClick={() => setShowIOSModal(false)}>Entendi</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        }
+            const processDownload = async (targetUrl) => {
+                if (!targetUrl) return;
+                isLoading = true;
+                magicIcon.classList.add('pulsing');
+                
+                try {
+                    const response = await fetch('https://twist-associate-mazda-mostly.trycloudflare.com/api/void', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: targetUrl }),
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.detail || "Erro ao conectar com o servidor.");
+                    
+                    if (data.download_link) {
+                        window.location.href = data.download_link;
+                    }
+                } catch (err) {
+                    showError(err.message);
+                } finally {
+                    isLoading = false;
+                    magicIcon.classList.remove('pulsing');
+                }
+            };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+            magicBtn.addEventListener('click', async () => {
+                if (isLoading) return;
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text && (text.includes("http://") || text.includes("https://"))) {
+                        processDownload(text);
+                    } else {
+                        showError("Nenhum link válido encontrado na área de transferência.");
+                    }
+                } catch (err) {
+                    showError("Para a mágica funcionar, aceite colar o link do clipboard.");
+                }
+            });
+        });
     </script>
 </body>
 </html>
