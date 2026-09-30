@@ -75,8 +75,9 @@ async def void_download(request: VoidRequest):
             'no_warnings': True,
             'skip_download': True,
             'nocheckcertificate': True,
+            'cookiefile': 'cookies.txt',
             'extractor_args': {
-                'youtube': ['player_client=android', 'player_skip=webpage,configs']
+                'youtube': ['player_client=android,ios,web']
             },
             'http_headers': {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
