@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -11,7 +11,7 @@ app = FastAPI(title="APK Downloader API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://enb1one.github.io"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,39 +46,33 @@ async def extract_apk(request: URLRequest):
     }
 
 @app.post("/api/void")
-async def void_download(request: VoidRequest):
+async def void_download(request: VoidRequest, req: Request):
     url = request.url
     download_url = None
     title = "Media Extraída (PureVoid)"
     thumbnail = ""
 
-    # 1. TIKTOK (TikWM API para burlar IP-Lock da Oracle)
+    # 1. TIKTOK (TikWM API com fallback)
     if "tiktok.com" in url.lower():
         try:
-            async with httpx.AsyncClient() as client:
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+            async with httpx.AsyncClient(headers=headers, timeout=15.0) as client:
                 res = await client.get(f"https://www.tikwm.com/api/?url={url}")
                 data = res.json()
                 if data.get("code") == 0 and "data" in data:
                     title = data["data"].get("title", title)
                     thumbnail = data["data"].get("cover", "")
                     download_url = data["data"].get("play")
-                else:
-                    raise Exception("A API do TikTok retornou erro.")
-        except Exception as e:
-            raise HTTPException(status_code=400, detail="O TikTok bloqueou a extração desse vídeo.")
+        except Exception:
+            pass
 
-    # 2. YOUTUBE / OUTROS (yt-dlp)
-    else:
+    # 2. YOUTUBE / OUTROS / FALLBACK (yt-dlp via WARP SOCKS5)
+    if not download_url:
         ydl_opts = {
-            'format': 'best',
             'quiet': True,
             'no_warnings': True,
-            'skip_download': True,
             'nocheckcertificate': True,
-            'cookiefile': 'cookies.txt',
-            'extractor_args': {
-                'youtube': ['player_client=android,ios,web']
-            },
+            'proxy': 'socks5://127.0.0.1:40000',
             'http_headers': {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             }
@@ -90,22 +84,28 @@ async def void_download(request: VoidRequest):
                     info = info['entries'][0]
                 title = info.get('title', title)
                 download_url = info.get('url')
+                if not download_url and 'formats' in info:
+                    progressive = [f for f in info['formats'] if f.get('vcodec') != 'none' and f.get('acodec') != 'none']
+                    if progressive:
+                        download_url = progressive[-1].get('url')
+                    elif info['formats']:
+                        download_url = info['formats'][-1].get('url')
                 thumbnail = info.get('thumbnail', '')
         except Exception as e:
             error_str = str(e)
             if "Sign in to confirm" in error_str:
-                raise HTTPException(status_code=403, detail="O YouTube bloqueou a extração. Tente outro link.")
+                raise HTTPException(status_code=403, detail="O YouTube bloqueou a extração temporariamente.")
             raise HTTPException(status_code=400, detail=f"Erro ao extrair mídia: {error_str}")
 
     if not download_url:
         raise HTTPException(status_code=400, detail="URL de download direto não encontrada.")
 
-    # OBRIGATÓRIO: Passar TODOS os links pelo Túnel Proxy OCI.
-    # Motivo: Se não passarmos pelo proxy, o link da CDN (TikTok/Insta) abrirá 
-    # o vídeo no Player do Navegador. O Proxy injeta 'Content-Disposition: attachment',
-    # forçando o celular/PC a INICIAR O DOWNLOAD IMEDIATAMENTE (salvar na galeria).
     safe_url = urllib.parse.quote(download_url, safe='')
-    final_link = f"https://twist-associate-mazda-mostly.trycloudflare.com/api/proxy?video_url={safe_url}"
+    base_url = str(req.base_url).rstrip('/')
+    # Garante que use https caso venha por proxy reverso/tunnel
+    if base_url.startswith("http://") and "localhost" not in base_url and "127.0.0.1" not in base_url:
+        base_url = "https://" + base_url[7:]
+    final_link = f"{base_url}/api/proxy?video_url={safe_url}"
     
     return {
         "status": "sucesso",
@@ -117,7 +117,8 @@ async def void_download(request: VoidRequest):
 @app.get("/api/proxy")
 async def proxy_video(video_url: str):
     async def stream_generator():
-        async with httpx.AsyncClient(follow_redirects=True) as client:
+        proxy = "socks5://127.0.0.1:40000" if ("googlevideo.com" in video_url or "youtube" in video_url) else None
+        async with httpx.AsyncClient(follow_redirects=True, proxy=proxy, timeout=30.0) as client:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "*/*"
@@ -125,9 +126,9 @@ async def proxy_video(video_url: str):
             try:
                 async with client.stream("GET", video_url, headers=headers) as response:
                     response.raise_for_status()
-                    async for chunk in response.aiter_bytes(chunk_size=8192):
+                    async for chunk in response.aiter_bytes(chunk_size=65536):
                         yield chunk
-            except httpx.HTTPStatusError as e:
+            except Exception as e:
                 yield f"Erro no proxy OCI (Video inacessivel): {str(e)}".encode()
 
     return StreamingResponse(stream_generator(), media_type="application/octet-stream", headers={
