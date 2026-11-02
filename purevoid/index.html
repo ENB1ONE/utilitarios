@@ -151,7 +151,7 @@
             });
 
             const isIOS = () => {
-                return ['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+                return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
             };
 
             const showError = (msg) => {
@@ -203,7 +203,42 @@
                     if (!response.ok) throw new Error(data.detail || "Erro ao conectar com o servidor.");
                     
                     if (data.download_link) {
-                        window.location.href = data.download_link;
+                        const cleanTitle = (data.title || "video").replace(/[\\/*?:"<>|]/g, "").trim() || "video";
+                        const filename = `${cleanTitle}.mp4`;
+
+                        if (isIOS()) {
+                            let shared = false;
+                            if (navigator.canShare) {
+                                try {
+                                    const vidRes = await fetch(data.download_link);
+                                    if (vidRes.ok) {
+                                        const blob = await vidRes.blob();
+                                        const file = new File([blob], filename, { type: 'video/mp4' });
+                                        if (navigator.canShare({ files: [file] })) {
+                                            await navigator.share({
+                                                files: [file],
+                                                title: cleanTitle
+                                            });
+                                            shared = true;
+                                        }
+                                    }
+                                } catch (shareErr) {
+                                    console.warn("Share API fallback:", shareErr);
+                                }
+                            }
+                            if (!shared) {
+                                // Safari download dialog nativo
+                                window.location.href = data.download_link;
+                            }
+                        } else {
+                            // Desktop / Android: Download silencioso direto
+                            const a = document.createElement('a');
+                            a.href = data.download_link;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            setTimeout(() => a.remove(), 1000);
+                        }
                     }
                 } catch (err) {
                     showError(err.message);
