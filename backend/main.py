@@ -44,6 +44,30 @@ def cleanup_cache():
     except Exception:
         pass
 
+def ensure_h264(file_path: str):
+    """Garante que o arquivo de vídeo use estritamente H.264 + AAC com faststart para aceitação 100% no Fotos do iOS."""
+    try:
+        import subprocess
+        probe = subprocess.check_output([
+            'ffprobe', '-v', 'error',
+            '-show_entries', 'stream=codec_name',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            file_path
+        ]).decode().splitlines()
+        vcodec = probe[0] if len(probe) > 0 else ""
+        if vcodec and vcodec not in ['h264', 'hevc']:
+            tmp_fixed = file_path + ".fixed.mp4"
+            subprocess.run([
+                'ffmpeg', '-y', '-i', file_path,
+                '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23',
+                '-c:a', 'aac', '-movflags', '+faststart',
+                tmp_fixed
+            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if os.path.exists(tmp_fixed):
+                os.replace(tmp_fixed, file_path)
+    except Exception as e:
+        print(f"ensure_h264 warning: {e}")
+
 class URLRequest(BaseModel):
     playstore_url: str
 
@@ -117,12 +141,12 @@ async def void_download(request: VoidRequest, req: Request, background_tasks: Ba
                 title = info.get('title', title)
                 thumbnail = info.get('thumbnail', '')
                 
-                # Procura primeiro formato progressivo MP4 (H.264 + AAC, 100% compativel com iOS)
+                # Procura primeiro formato progressivo MP4 nativo (H.264 + AAC, 100% compativel com iOS)
                 formats = info.get('formats', [])
                 mp4_prog = [
                     f for f in formats 
-                    if f.get('vcodec') and f.get('vcodec') != 'none' 
-                    and f.get('acodec') and f.get('acodec') != 'none' 
+                    if f.get('vcodec') and ('avc' in f.get('vcodec').lower() or 'h264' in f.get('vcodec').lower())
+                    and f.get('acodec') and ('mp4a' in f.get('acodec').lower() or 'aac' in f.get('acodec').lower())
                     and (f.get('ext') == 'mp4' or 'mp4' in (f.get('container') or ''))
                     and f.get('url')
                 ]
@@ -130,7 +154,7 @@ async def void_download(request: VoidRequest, req: Request, background_tasks: Ba
                 if mp4_prog:
                     download_url = mp4_prog[-1].get('url')
                 else:
-                    # Se não tem MP4 progressivo direto (ex: YouTube DASH), mesclamos no servidor via ffmpeg
+                    # Se não tem MP4 progressivo H.264 direto (ex: YouTube 720p DASH), mesclamos no servidor via ffmpeg
                     uid = str(uuid.uuid4())[:8]
                     file_id = f"{uid}.mp4"
                     out_path = os.path.join(CACHE_DIR, file_id)
@@ -139,7 +163,7 @@ async def void_download(request: VoidRequest, req: Request, background_tasks: Ba
                         'no_warnings': True,
                         'nocheckcertificate': True,
                         'proxy': 'socks5://127.0.0.1:40000',
-                        'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+                        'format': 'bestvideo[height<=720][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<=720][vcodec^=avc]+bestaudio[ext=m4a]/bestvideo[height<=720][vcodec^=avc]+bestaudio/bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best',
                         'merge_output_format': 'mp4',
                         'outtmpl': out_path
                     }
@@ -151,6 +175,10 @@ async def void_download(request: VoidRequest, req: Request, background_tasks: Ba
                     
                     if not os.path.exists(out_path):
                         raise Exception("Falha ao gerar o arquivo de vídeo mesclado.")
+                    
+                    # Garantir que o codec de vídeo final seja H.264/AAC para compatibilidade com o app Fotos do iOS
+                    ensure_h264(out_path)
+
         except Exception as e:
             error_str = str(e)
             if "Sign in to confirm" in error_str:

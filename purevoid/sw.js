@@ -1,5 +1,5 @@
 // purevoid/sw.js - PureVoid Service Worker com atualizacao forcada
-const CACHE_NAME = 'purevoid-cache-v1.3.0';
+const CACHE_NAME = 'purevoid-cache-v1.3.1';
 
 // Força o Service Worker a ativar imediatamente sem esperar fechar as abas
 self.addEventListener('install', (event) => {
