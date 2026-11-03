@@ -161,7 +161,7 @@
         
         <div class="error-text" id="errorText"></div>
 
-        <div class="version-badge" id="versionBadge" title="Toque para checar atualizações | Toque duplo para forçar recarga">v1.2.0</div>
+        <div class="version-badge" id="versionBadge" title="Toque para checar atualizações | Toque duplo para forçar recarga">v1.2.1</div>
         <div class="update-toast" id="updateToast"></div>
 
         <div class="install-banner hidden" id="installBanner">
@@ -181,7 +181,7 @@
     </div>
 
     <script>
-        const APP_VERSION = '1.2.0';
+        const APP_VERSION = '1.2.1';
 
         // Registro e ciclo de vida do Service Worker
         if ('serviceWorker' in navigator) {
@@ -412,28 +412,8 @@
                         const filename = `${cleanTitle}.mp4`;
 
                         if (isIOS()) {
-                            let shared = false;
-                            if (navigator.canShare) {
-                                try {
-                                    const vidRes = await fetch(data.download_link);
-                                    if (vidRes.ok) {
-                                        const blob = await vidRes.blob();
-                                        const file = new File([blob], filename, { type: 'video/mp4' });
-                                        if (navigator.canShare({ files: [file] })) {
-                                            await navigator.share({
-                                                files: [file],
-                                                title: cleanTitle
-                                            });
-                                            shared = true;
-                                        }
-                                    }
-                                } catch (shareErr) {
-                                    console.warn("Share API fallback:", shareErr);
-                                }
-                            }
-                            if (!shared) {
-                                window.location.href = data.download_link;
-                            }
+                            // No iOS Safari/PWA, abrir o link diretamente aciona a folha de download nativa com o nome exato
+                            window.location.href = data.download_link;
                         } else {
                             const a = document.createElement('a');
                             a.href = data.download_link;

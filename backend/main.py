@@ -1,6 +1,7 @@
 import os
 import re
 import uuid
+import time
 import urllib.parse
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +28,21 @@ COOKIES_FILE = os.path.join(os.path.dirname(__file__), "cookies.txt")
 def sanitize_filename(name: str) -> str:
     cleaned = re.sub(r'[\\/*?:"<>|\n\r\t]', '', name).strip()
     return cleaned[:100] if len(cleaned) > 100 else (cleaned or "purevoid_video")
+
+def cleanup_cache():
+    """Remove arquivos com mais de 30 minutos do cache sem travar downloads ativos."""
+    try:
+        now = time.time()
+        if os.path.exists(CACHE_DIR):
+            for fname in os.listdir(CACHE_DIR):
+                fpath = os.path.join(CACHE_DIR, fname)
+                if os.path.isfile(fpath) and (now - os.path.getmtime(fpath) > 1800):
+                    try:
+                        os.remove(fpath)
+                    except Exception:
+                        pass
+    except Exception:
+        pass
 
 class URLRequest(BaseModel):
     playstore_url: str
@@ -57,7 +73,8 @@ async def extract_apk(request: URLRequest):
     }
 
 @app.post("/api/void")
-async def void_download(request: VoidRequest, req: Request):
+async def void_download(request: VoidRequest, req: Request, background_tasks: BackgroundTasks = BackgroundTasks()):
+    background_tasks.add_task(cleanup_cache)
     url = request.url.strip()
     download_url = None
     title = "purevoid_video"
@@ -113,11 +130,10 @@ async def void_download(request: VoidRequest, req: Request):
                 if mp4_prog:
                     download_url = mp4_prog[-1].get('url')
                 else:
-                    # Se não tem MP4 progressivo (ex: YouTube DASH com streams separados),
-                    # baixamos e mesclamos em MP4 HD no servidor com ffmpeg
+                    # Se não tem MP4 progressivo direto (ex: YouTube DASH), mesclamos no servidor via ffmpeg
                     uid = str(uuid.uuid4())[:8]
-                    clean = sanitize_filename(title)
-                    out_path = f"{CACHE_DIR}/{uid}_{clean}.mp4"
+                    file_id = f"{uid}.mp4"
+                    out_path = os.path.join(CACHE_DIR, file_id)
                     merge_opts = {
                         'quiet': True,
                         'no_warnings': True,
@@ -133,8 +149,8 @@ async def void_download(request: VoidRequest, req: Request):
                     with yt_dlp.YoutubeDL(merge_opts) as merge_ydl:
                         merge_ydl.download([url])
                     
-                    if os.path.exists(out_path):
-                        file_id = f"{uid}_{clean}.mp4"
+                    if not os.path.exists(out_path):
+                        raise Exception("Falha ao gerar o arquivo de vídeo mesclado.")
         except Exception as e:
             error_str = str(e)
             if "Sign in to confirm" in error_str:
@@ -211,7 +227,11 @@ async def proxy_video(video_url: str, title: str = "video"):
 @app.get("/api/file")
 @app.head("/api/file")
 async def serve_file(file_id: str, title: str = "video", background_tasks: BackgroundTasks = BackgroundTasks()):
-    file_path = os.path.join(CACHE_DIR, os.path.basename(file_id))
+    # Limpa arquivos expirados em background sem apagar o arquivo atual
+    background_tasks.add_task(cleanup_cache)
+
+    safe_id = os.path.basename(file_id)
+    file_path = os.path.join(CACHE_DIR, safe_id)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Arquivo expirado ou não encontrado.")
 
@@ -220,10 +240,12 @@ async def serve_file(file_id: str, title: str = "video", background_tasks: Backg
     encoded_title = urllib.parse.quote(clean_title)
     content_disposition = f'attachment; filename="{ascii_title}.mp4"; filename*=UTF-8\'\'{encoded_title}.mp4'
 
-    # Exclui o arquivo temporário após o envio completo
-    background_tasks.add_task(os.remove, file_path)
-
-    return FileResponse(file_path, media_type="video/mp4", headers={
-        "Content-Disposition": content_disposition,
-        "Content-Type": "video/mp4"
-    })
+    return FileResponse(
+        file_path,
+        media_type="video/mp4",
+        headers={
+            "Content-Disposition": content_disposition,
+            "Content-Type": "video/mp4",
+            "Accept-Ranges": "bytes"
+        }
+    )
