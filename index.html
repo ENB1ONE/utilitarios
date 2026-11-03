@@ -263,7 +263,16 @@ body {
         const { useState, useEffect } = React;
 
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('./sw.js').catch(()=>{});
+          navigator.serviceWorker.register('./sw.js').then((reg) => {
+            reg.update();
+          }).catch(()=>{});
+          let isRefreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!isRefreshing) {
+              isRefreshing = true;
+              window.location.reload();
+            }
+          });
         }
 
         function Hub() {

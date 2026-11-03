@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PureVoid Downloader</title>
     
+    <!-- Meta tags para evitar cache permanente no iOS WebClip e navegadores -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,6 +33,7 @@
         height: 100vh;
         width: 100vw;
         flex-direction: column;
+        position: relative;
       }
       .blackhole-btn {
         width: 250px;
@@ -100,6 +106,51 @@
       .hidden {
         display: none !important;
       }
+      .version-badge {
+        position: fixed;
+        bottom: 16px;
+        font-size: 0.75rem;
+        color: #48484a;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        padding: 6px 14px;
+        border-radius: 20px;
+        transition: all 0.2s ease;
+        user-select: none;
+        -webkit-user-select: none;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        z-index: 50;
+      }
+      .version-badge:active {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.15);
+        transform: scale(0.95);
+      }
+      .update-toast {
+        position: fixed;
+        top: 24px;
+        background: rgba(28, 28, 30, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: none;
+        z-index: 2000;
+      }
+      .update-toast.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
     </style>
 </head>
 <body>
@@ -109,6 +160,9 @@
         </div>
         
         <div class="error-text" id="errorText"></div>
+
+        <div class="version-badge" id="versionBadge" title="Toque para checar atualizações | Toque duplo para forçar recarga">v1.2.0</div>
+        <div class="update-toast" id="updateToast"></div>
 
         <div class="install-banner hidden" id="installBanner">
             <p class="install-text">Instale o PureVoid <span>Rápido. Nativo. Sem anúncios.</span></p>
@@ -127,6 +181,26 @@
     </div>
 
     <script>
+        const APP_VERSION = '1.2.0';
+
+        // Registro e ciclo de vida do Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then((reg) => {
+                    console.log('[PureVoid SW] Registrado');
+                    reg.update();
+                }).catch(err => console.warn('[PureVoid SW] Erro:', err));
+            });
+
+            let isRefreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!isRefreshing) {
+                    isRefreshing = true;
+                    window.location.reload();
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             let deferredPrompt = null;
             let isLoading = false;
@@ -139,6 +213,8 @@
             const iosModal = document.getElementById('iosModal');
             const iosModalContent = document.getElementById('iosModalContent');
             const closeIosModalBtn = document.getElementById('closeIosModalBtn');
+            const versionBadge = document.getElementById('versionBadge');
+            const updateToast = document.getElementById('updateToast');
 
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             if (!isStandalone) {
@@ -161,6 +237,135 @@
                     errorText.classList.remove('visible');
                 }, 4000);
             };
+
+            const showToast = (msg, duration = 2500) => {
+                if (!updateToast) return;
+                updateToast.textContent = msg;
+                updateToast.classList.add('visible');
+                setTimeout(() => {
+                    updateToast.classList.remove('visible');
+                }, duration);
+            };
+
+            // Mecanismo de Atualização Forçada (PWA / WebClip)
+            const executeForceReload = (newVersion) => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('v', newVersion);
+                url.searchParams.set('_t', Date.now().toString());
+                window.location.replace(url.toString());
+            };
+
+            const purgeCachesAndReload = async (newVersion) => {
+                showToast(`Atualizando PureVoid (${newVersion})...`, 4000);
+                
+                if ('caches' in window) {
+                    try {
+                        const keys = await caches.keys();
+                        await Promise.all(keys.map(k => caches.delete(k)));
+                    } catch (e) {
+                        console.warn('[PureVoid] Erro ao limpar caches:', e);
+                    }
+                }
+
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        for (const r of regs) {
+                            await r.update();
+                        }
+                    } catch (e) {
+                        console.warn('[PureVoid] Erro ao atualizar SW:', e);
+                    }
+                }
+
+                localStorage.setItem('purevoid_version', newVersion);
+
+                setTimeout(() => {
+                    executeForceReload(newVersion);
+                }, 500);
+            };
+
+            const checkAppUpdate = async (isManual = false) => {
+                try {
+                    if (isManual) {
+                        versionBadge.textContent = '🔄 Checando...';
+                    }
+
+                    const response = await fetch(`./version.json?_t=${Date.now()}`, {
+                        cache: 'no-store',
+                        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+                    });
+
+                    if (!response.ok) {
+                        if (isManual) {
+                            versionBadge.textContent = `v${APP_VERSION}`;
+                            showToast('Servidor indisponível.');
+                        }
+                        return;
+                    }
+
+                    const data = await response.json();
+                    const serverVersion = data.version;
+
+                    if (serverVersion && serverVersion !== APP_VERSION) {
+                        console.log(`[PureVoid] Nova versão encontrada: ${serverVersion} (atual: ${APP_VERSION})`);
+                        await purgeCachesAndReload(serverVersion);
+                    } else {
+                        localStorage.setItem('purevoid_version', APP_VERSION);
+                        if (isManual) {
+                            versionBadge.textContent = `✓ v${APP_VERSION} (Atualizado)`;
+                            showToast('PureVoid já está na versão mais recente!');
+                            setTimeout(() => {
+                                versionBadge.textContent = `v${APP_VERSION}`;
+                            }, 2500);
+                        }
+                    }
+                } catch (err) {
+                    console.warn('[PureVoid] Falha na checagem de update:', err);
+                    if (isManual) {
+                        versionBadge.textContent = `v${APP_VERSION}`;
+                        showToast('Erro ao checar atualizações.');
+                    }
+                }
+            };
+
+            // Gatilhos automáticos de verificação
+            checkAppUpdate(false);
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    checkAppUpdate(false);
+                }
+            });
+
+            window.addEventListener('pageshow', (event) => {
+                if (event.persisted) {
+                    checkAppUpdate(false);
+                }
+            });
+
+            setInterval(() => checkAppUpdate(false), 300000);
+
+            // Gatilho manual: clique no badge
+            versionBadge.addEventListener('click', () => {
+                checkAppUpdate(true);
+            });
+
+            // Duplo clique ou duplo toque rápido: Força recarga completa imediata
+            versionBadge.addEventListener('dblclick', () => {
+                purgeCachesAndReload(APP_VERSION);
+            });
+
+            let lastTapTime = 0;
+            versionBadge.addEventListener('touchend', (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTapTime;
+                if (tapLength < 400 && tapLength > 0) {
+                    e.preventDefault();
+                    purgeCachesAndReload(APP_VERSION);
+                }
+                lastTapTime = currentTime;
+            });
 
             installBtn.addEventListener('click', () => {
                 if (isIOS()) {
@@ -227,11 +432,9 @@
                                 }
                             }
                             if (!shared) {
-                                // Safari download dialog nativo
                                 window.location.href = data.download_link;
                             }
                         } else {
-                            // Desktop / Android: Download silencioso direto
                             const a = document.createElement('a');
                             a.href = data.download_link;
                             a.download = filename;
